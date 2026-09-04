@@ -1,0 +1,20 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.iml
+
+# Platform folders are regenerated in CI via `flutter create .`
+windows/
+android/
+ios/
+linux/
+macos/
+web/
+
+# IDE
+.idea/
+.vscode/
+
+# Misc
+*.log
