@@ -35,19 +35,40 @@ class FfmpegService {
     );
   }
 
-  List<String> _buildArgs(String input, String output, String preset, int crf) {
-    return [
-      '-y',
-      '-i', input,
-      '-c:v', 'libx264',
-      '-preset', preset,
-      '-crf', '$crf',
-      '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac',
-      '-b:a', '192k',
-      '-movflags', '+faststart',
-      output,
-    ];
+  List<String> _buildArgs(String input, String output, String outputFormat, String qualityPreset) {
+    switch (outputFormat) {
+      case 'mp3':
+        return [
+          '-y',
+          '-i', input,
+          '-vn',
+          '-c:a', 'libmp3lame',
+          '-b:a', _mp3BitrateFor(qualityPreset),
+          output,
+        ];
+      case 'wav':
+        return [
+          '-y',
+          '-i', input,
+          '-vn',
+          '-c:a', 'pcm_s16le',
+          output,
+        ];
+      default:
+        final (preset, crf) = _presetFor(qualityPreset);
+        return [
+          '-y',
+          '-i', input,
+          '-c:v', 'libx264',
+          '-preset', preset,
+          '-crf', '$crf',
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          '-b:a', '192k',
+          '-movflags', '+faststart',
+          output,
+        ];
+    }
   }
 
   (String, int) _presetFor(String qualityPreset) {
@@ -61,20 +82,32 @@ class FfmpegService {
     }
   }
 
-  /// Converts [input] to [output]. Calls [onStarted] as soon as the process
-  /// launches (so the caller can cancel it later) and [onProgress] with a
-  /// value in [0, 1] as FFmpeg reports encoding progress. Throws
-  /// [FfmpegException] if the process exits with a non-zero code.
+  String _mp3BitrateFor(String qualityPreset) {
+    switch (qualityPreset) {
+      case 'fast':
+        return '128k';
+      case 'best':
+        return '320k';
+      default:
+        return '192k';
+    }
+  }
+
+  /// Converts [input] to [output] as [outputFormat] ('mp4', 'mov', 'mp3', or
+  /// 'wav'). Calls [onStarted] as soon as the process launches (so the
+  /// caller can cancel it later) and [onProgress] with a value in [0, 1] as
+  /// FFmpeg reports encoding progress. Throws [FfmpegException] if the
+  /// process exits with a non-zero code.
   Future<void> convert({
     required String input,
     required String output,
+    required String outputFormat,
     required String qualityPreset,
     required void Function(Process process) onStarted,
     required void Function(double progress) onProgress,
   }) async {
-    final (preset, crf) = _presetFor(qualityPreset);
-
-    final process = await Process.start(_ffmpegPath, _buildArgs(input, output, preset, crf));
+    final process =
+        await Process.start(_ffmpegPath, _buildArgs(input, output, outputFormat, qualityPreset));
     onStarted(process);
 
     Duration? totalDuration;

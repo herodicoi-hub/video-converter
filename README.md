@@ -1,26 +1,31 @@
 # Video Converter
 
-A Windows desktop app that converts any video file to **MP4** or **MOV**.
+A Windows desktop app that converts any video file to **MP4** or **MOV** -
+or pulls out just the audio as **MP3** or **WAV**.
 
 Drag and drop one or more video files onto the app (or use Browse), pick
-MP4 or MOV and a quality level, and hit Convert. Everything happens locally
-on your machine - no uploads, no accounts, no internet needed.
+Video or Audio only, then a format and quality level, and hit Convert.
+Everything happens locally on your machine - no uploads, no accounts, no
+internet needed.
 
 ## What it does
 
 - **Drag & drop** video files (or a whole folder of them) to queue them up.
-- Converts to **MP4** or **MOV**, using the widely-compatible H.264 video /
-  AAC audio combination so the output plays everywhere.
+- **Video mode**: converts to **MP4** or **MOV**, using the widely-compatible
+  H.264 video / AAC audio combination so the output plays everywhere.
+- **Audio only mode**: extracts just the soundtrack as **MP3** or **WAV**,
+  like exporting "Audio Only" in Adobe Media Encoder.
 - **Quality presets**: Fast, Balanced, or Best quality (trades off
-  conversion speed against file size/sharpness).
+  conversion speed against file size/sharpness). Not shown for WAV, since
+  it's uncompressed and always full quality.
 - Converts files **one at a time** with a live progress bar per file, and
   you can cancel any file mid-conversion.
 - Choose where converted files are saved - next to each original by
   default, or a folder of your choosing.
 - Once a file is done, **Play** it or **Show in folder** right from the
   list.
-- Remembers your last-used format, quality, and output folder for next
-  time.
+- Remembers your last-used mode, format, quality, and output folder for
+  next time.
 
 ## How this gets built
 

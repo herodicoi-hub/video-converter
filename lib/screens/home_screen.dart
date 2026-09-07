@@ -23,10 +23,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final _settings = SettingsService();
 
   final List<ConversionJob> _jobs = [];
-  String _format = 'mp4';
+  String _mode = 'video'; // 'video' | 'audio'
+  String _videoFormat = 'mp4';
+  String _audioFormat = 'mp3';
   String _quality = 'balanced';
   String? _customOutputDir;
   bool _isConverting = false;
+
+  String get _effectiveFormat => _mode == 'video' ? _videoFormat : _audioFormat;
 
   @override
   void initState() {
@@ -37,7 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadSettings() async {
     final saved = await _settings.load();
     setState(() {
-      _format = saved['format'] ?? 'mp4';
+      _mode = saved['mode'] ?? 'video';
+      _videoFormat = saved['videoFormat'] ?? 'mp4';
+      _audioFormat = saved['audioFormat'] ?? 'mp3';
       _quality = saved['quality'] ?? 'balanced';
       _customOutputDir = saved['outputDir'];
     });
@@ -46,12 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String _computeOutputPath(String sourcePath, {Iterable<ConversionJob> extra = const []}) {
     final dir = _customOutputDir ?? p.dirname(sourcePath);
     final baseName = p.basenameWithoutExtension(sourcePath);
-    var candidate = p.join(dir, '$baseName.$_format');
+    var candidate = p.join(dir, '$baseName.$_effectiveFormat');
     var n = 1;
     bool taken(String path) =>
         File(path).existsSync() || _jobs.any((j) => j.outputPath == path) || extra.any((j) => j.outputPath == path);
     while (taken(candidate)) {
-      candidate = p.join(dir, '$baseName ($n).$_format');
+      candidate = p.join(dir, '$baseName ($n).$_effectiveFormat');
       n++;
     }
     return candidate;
@@ -109,6 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _ffmpeg.convert(
         input: job.sourcePath,
         output: job.outputPath,
+        outputFormat: _effectiveFormat,
         qualityPreset: _quality,
         onStarted: (process) => job.process = process,
         onProgress: (progress) {
@@ -179,10 +186,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _settings.saveOutputDir(null);
   }
 
-  void _onFormatChanged(String format) {
-    setState(() => _format = format);
+  void _onModeChanged(String mode) {
+    setState(() => _mode = mode);
     _refreshQueuedOutputPaths();
-    _settings.saveFormat(format);
+    _settings.saveMode(mode);
+  }
+
+  void _onVideoFormatChanged(String format) {
+    setState(() => _videoFormat = format);
+    _refreshQueuedOutputPaths();
+    _settings.saveVideoFormat(format);
+  }
+
+  void _onAudioFormatChanged(String format) {
+    setState(() => _audioFormat = format);
+    _refreshQueuedOutputPaths();
+    _settings.saveAudioFormat(format);
   }
 
   void _onQualityChanged(String quality) {
@@ -275,24 +294,43 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         SegmentedButton<String>(
           segments: const [
-            ButtonSegment(value: 'mp4', label: Text('MP4')),
-            ButtonSegment(value: 'mov', label: Text('MOV')),
+            ButtonSegment(value: 'video', label: Text('Video'), icon: Icon(Icons.videocam_outlined)),
+            ButtonSegment(value: 'audio', label: Text('Audio only'), icon: Icon(Icons.audiotrack_outlined)),
           ],
-          selected: {_format},
-          onSelectionChanged: (selection) => _onFormatChanged(selection.first),
+          selected: {_mode},
+          onSelectionChanged: (selection) => _onModeChanged(selection.first),
         ),
-        DropdownMenu<String>(
-          initialSelection: _quality,
-          label: const Text('Quality'),
-          onSelected: (value) {
-            if (value != null) _onQualityChanged(value);
-          },
-          dropdownMenuEntries: const [
-            DropdownMenuEntry(value: 'fast', label: 'Fast'),
-            DropdownMenuEntry(value: 'balanced', label: 'Balanced'),
-            DropdownMenuEntry(value: 'best', label: 'Best quality'),
-          ],
-        ),
+        if (_mode == 'video')
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'mp4', label: Text('MP4')),
+              ButtonSegment(value: 'mov', label: Text('MOV')),
+            ],
+            selected: {_videoFormat},
+            onSelectionChanged: (selection) => _onVideoFormatChanged(selection.first),
+          )
+        else
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'mp3', label: Text('MP3')),
+              ButtonSegment(value: 'wav', label: Text('WAV')),
+            ],
+            selected: {_audioFormat},
+            onSelectionChanged: (selection) => _onAudioFormatChanged(selection.first),
+          ),
+        if (_effectiveFormat != 'wav')
+          DropdownMenu<String>(
+            initialSelection: _quality,
+            label: const Text('Quality'),
+            onSelected: (value) {
+              if (value != null) _onQualityChanged(value);
+            },
+            dropdownMenuEntries: const [
+              DropdownMenuEntry(value: 'fast', label: 'Fast'),
+              DropdownMenuEntry(value: 'balanced', label: 'Balanced'),
+              DropdownMenuEntry(value: 'best', label: 'Best quality'),
+            ],
+          ),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
